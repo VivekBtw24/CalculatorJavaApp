@@ -1,0 +1,47 @@
+pipeline {
+	environment {
+    	registry = "guardian16/calc_project"
+    	registryCredential = 'dockerhub-creds'
+    	dockerImage = ''
+  }
+    agent any 
+    stages {
+        stage('Cleaning and Compilation Stage') { 
+            steps {
+                sh "mvn clean"
+                sh "mvn compile"
+            }
+        }
+        stage('Test Stage') { 
+            steps {
+                sh "mvn test"
+            }
+        }
+        stage('Building JAR File') { 
+            steps {
+                sh "mvn package"
+            }
+        }
+         stage('Building Docker Image') {
+      		steps {
+        		script {
+          			dockerImage = docker.build registry + ":latest"
+        		}
+      		}
+    	}
+    	stage('Publishing Docker Image') {
+      		steps {
+        		script {
+          			docker.withRegistry( '', registryCredential ) {
+            		dockerImage.push()
+          			}
+        		}
+      		}
+    	}
+    	stage('Trigger Rundeck'){
+    		steps {
+    			build 	'rundeck-test'
+    		}
+    	}
+    }
+}
